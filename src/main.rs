@@ -1,5 +1,11 @@
-use crossterm::{self, event::Event, event::KeyCode};
-use std::io;
+use crossterm::{
+    self, ExecutableCommand, cursor,
+    event::Event,
+    event::KeyCode,
+    execute,
+    terminal::{Clear, ClearType},
+};
+use std::io::{self, Write, stdout};
 #[derive(Debug, PartialEq)]
 enum Token {
     Number(f64),
@@ -127,30 +133,41 @@ fn main() {
             Event::Key(key_event) => match key_event.code {
                 KeyCode::Char(c) => {
                     calc.push(c);
-                    print!("{c}")
+                    print!("{c}");
+                    io::stdout().flush().unwrap(); // I do not understand whatever tf this is but
+                    // google does!
                 }
                 KeyCode::Backspace => {
                     calc.pop();
+                    let mut stdout = stdout();
+                    stdout.execute(cursor::MoveLeft(1)).unwrap();
+                    execute!(stdout, Clear(ClearType::UntilNewLine)).unwrap(); // WTF is an stdout
                 }
                 KeyCode::Enter => {
+                    if calc.is_empty() {
+                        continue;
+                    };
+                    if calc.trim() == "q" || calc.trim() == "exit" {
+                        break;
+                    };
                     let tokens = tokenize_line(&calc);
                     let mut pos: usize = 0;
                     let result = evaluate(parse_expr(&tokens, &mut pos));
                     println!("\n{result}");
                     answers.push(result);
+                    calc.clear();
                 }
                 KeyCode::Up => {
                     if let Some(last) = answers.last() {
-                        calc.push_str(&last.to_string())
+                        let c = &last.to_string();
+                        calc.push_str(c);
+                        print!("{c}");
+                        io::stdout().flush().unwrap(); // Seriously what?
                     }
                 }
                 _ => panic!("Wtf"),
             },
             _ => continue,
         }
-        let t_calc = calc.trim();
-        if t_calc == "q" || calc == "exit" {
-            break;
-        }
     }
-}
+} //Praise my lord google!!!
