@@ -153,7 +153,7 @@ fn main() {
                     let tokens = tokenize_line(&calc);
                     let mut pos: usize = 0;
                     let result = evaluate(parse_expr(&tokens, &mut pos));
-                    println!("\n{result}");
+                    println!("\r\n{result} \r\n");
                     answers.push(result);
                     calc.clear();
                 }
