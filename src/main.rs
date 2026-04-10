@@ -1,4 +1,4 @@
-use crossterm;
+use crossterm::{self, event::Event, event::KeyCode};
 use std::io;
 #[derive(Debug, PartialEq)]
 enum Token {
@@ -117,23 +117,40 @@ fn parse_expr(tokens: &[Token], pos: &mut usize) -> Expr {
 }
 
 fn main() {
-    let mut calculation = String::new();
-
     println!("This is a simple Calculator.\nEnter your operation: \n");
+    crossterm::terminal::enable_raw_mode().unwrap();
+    let mut calc = String::new();
     let mut answers: Vec<f64> = Vec::new();
+
     loop {
-        io::stdin()
-            .read_line(&mut calculation)
-            .expect("Failed to read line.");
-        let t_calc = calculation.trim();
-        if t_calc == "q" || calculation == "exit" {
+        match crossterm::event::read().unwrap() {
+            Event::Key(key_event) => match key_event.code {
+                KeyCode::Char(c) => {
+                    calc.push(c);
+                    print!("{c}")
+                }
+                KeyCode::Backspace => {
+                    calc.pop();
+                }
+                KeyCode::Enter => {
+                    let tokens = tokenize_line(&calc);
+                    let mut pos: usize = 0;
+                    let result = evaluate(parse_expr(&tokens, &mut pos));
+                    println!("\n{result}");
+                    answers.push(result);
+                }
+                KeyCode::Up => {
+                    if let Some(last) = answers.last() {
+                        calc.push_str(&last.to_string())
+                    }
+                }
+                _ => panic!("Wtf"),
+            },
+            _ => continue,
+        }
+        let t_calc = calc.trim();
+        if t_calc == "q" || calc == "exit" {
             break;
         }
-        let calculation = calculation.as_str();
-        let tokens = tokenize_line(calculation);
-        let mut pos: usize = 0;
-        println!("{}", evaluate(parse_expr(&tokens, &mut pos)));
-
-        answers.push(evaluate(parse_expr(&tokens, &mut pos)));
     }
 }
