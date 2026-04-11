@@ -13,6 +13,8 @@ enum Token {
     Minus,
     Times,
     Divide,
+    OpenBracket,
+    CloseBracket,
 }
 
 fn tokenize(input: &str) -> Token {
@@ -21,6 +23,8 @@ fn tokenize(input: &str) -> Token {
         "-" => Token::Minus,
         "*" => Token::Times,
         "/" => Token::Divide,
+        "(" => Token::OpenBracket,
+        ")" => Token::CloseBracket,
         _ => {
             if let Ok(n) = input.parse::<f64>() {
                 Token::Number(n)
@@ -58,14 +62,28 @@ fn evaluate(expr: Expr) -> f64 {
     }
 }
 
-fn parse_term(tokens: &[Token], pos: &mut usize) -> Expr {
-    let mut left = match &tokens[*pos] {
+fn parse_thing(tokens: &[Token], pos: &mut usize) -> Expr {
+    match &tokens[*pos] {
         Token::Number(n) => {
             *pos += 1;
             Expr::Number(*n)
         }
-        _ => panic!("expected number"),
-    };
+        Token::OpenBracket => {
+            *pos += 1;
+            let expr = parse_expr(tokens, pos);
+            assert!(
+                *pos < tokens.len() && tokens[*pos] == Token::CloseBracket,
+                "Expected a closing bracket"
+            );
+            *pos += 1;
+            expr
+        }
+        _ => panic!("I expected....\nWhat did i expect again?"),
+    }
+}
+
+fn parse_term(tokens: &[Token], pos: &mut usize) -> Expr {
+    let mut left = parse_thing(tokens, pos);
     while *pos < tokens.len() && matches!(tokens[*pos], Token::Divide | Token::Times,) {
         let op = match &tokens[*pos] {
             Token::Times => {
@@ -79,18 +97,11 @@ fn parse_term(tokens: &[Token], pos: &mut usize) -> Expr {
             _ => panic!("expected operation at token number {}", *pos),
         };
 
-        let right = match &tokens[*pos] {
-            Token::Number(n) => {
-                *pos += 1;
-                Expr::Number(*n)
-            }
-            _ => panic!("expected number"),
-        };
-
+        let right = parse_thing(tokens, pos);
         left = match op {
             Token::Times => Expr::Mul(Box::new(left), Box::new(right)),
             Token::Divide => Expr::Div(Box::new(left), Box::new(right)),
-            _ => panic!("Tf did you do for it to panic here???"),
+            _ => panic!("Something went wrong."),
         }
     }
     left
@@ -115,7 +126,7 @@ fn parse_expr(tokens: &[Token], pos: &mut usize) -> Expr {
         left = match op {
             Token::Plus => Expr::Add(Box::new(left), Box::new(right)),
             Token::Minus => Expr::Sub(Box::new(left), Box::new(right)),
-            _ => panic!("No way you got this message. How????"),
+            _ => panic!("You entered a non-valid operation..."),
         }
     }
 
@@ -129,19 +140,19 @@ fn main() {
     let mut answers: Vec<f64> = Vec::new();
 
     loop {
+        // Handle user input
         match crossterm::event::read().unwrap() {
             Event::Key(key_event) => match key_event.code {
                 KeyCode::Char(c) => {
                     calc.push(c);
                     print!("{c}");
-                    io::stdout().flush().unwrap(); // I do not understand whatever tf this is but
-                    // google does!
+                    io::stdout().flush().unwrap();
                 }
                 KeyCode::Backspace => {
                     calc.pop();
                     let mut stdout = stdout();
                     stdout.execute(cursor::MoveLeft(1)).unwrap();
-                    execute!(stdout, Clear(ClearType::UntilNewLine)).unwrap(); // WTF is an stdout
+                    execute!(stdout, Clear(ClearType::UntilNewLine)).unwrap();
                 }
                 KeyCode::Enter => {
                     if calc.is_empty() {
@@ -162,10 +173,10 @@ fn main() {
                         let c = &last.to_string();
                         calc.push_str(c);
                         print!("{c}");
-                        io::stdout().flush().unwrap(); // Seriously what?
+                        io::stdout().flush().unwrap();
                     }
                 }
-                _ => panic!("Wtf"),
+                _ => continue,
             },
             _ => continue,
         }
