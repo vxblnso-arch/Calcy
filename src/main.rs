@@ -162,7 +162,7 @@ fn main() {
                         let c = &last.to_string();
                         calc.push_str(c);
                         print!("{c}");
-                        io::stdout().flush().unwrap(); // Seriously what?
+                        io::stdout().flush().unwrap();
                     }
                 }
                 _ => panic!("Wtf"),
